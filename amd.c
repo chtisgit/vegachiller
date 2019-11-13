@@ -4,18 +4,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-int amdReadTemp(const char *path_, int *temp)
+#define MAX_PATH_LEN 1024
+
+static int amdReadInt(const char *path_, const char *path_ext, int path_ext_len, int *res)
 {
-	static const char file[] = "/hwmon/hwmon0/temp1_input";
-	char *path = malloc(strlen(path_) + sizeof file);
+	char path[MAX_PATH_LEN];
+	if(strlen(path_)+path_ext_len >= MAX_PATH_LEN-1)
+		return 1;
+
 	strcpy(path, path_);
-	strcat(path, file);
+	strcat(path, path_ext);
 
 	FILE *f = fopen(path, "rb");
 	if (f == NULL)
 		return 1;
 
-	if (fscanf(f, "%d\n", temp) != 1)
+	if (fscanf(f, "%d\n", res) != 1)
 		return 1;
 
 	fclose(f);
@@ -23,45 +27,72 @@ int amdReadTemp(const char *path_, int *temp)
 	return 0;
 }
 
-int amdSetControlMode(const char *path_, enum ControlMode mode)
+static int amdWriteInt(const char *path_, const char *path_ext, int path_ext_len, int value)
 {
-	if(mode != AUTOMATIC && mode != MANUAL) {
+	char path[MAX_PATH_LEN];
+	if(strlen(path_)+path_ext_len >= MAX_PATH_LEN-1)
+		return 1;
+
+	strcpy(path, path_);
+	strcat(path, path_ext);
+
+	FILE *f = fopen(path, "rb");
+	if (f == NULL)
+		return 1;
+
+	fprintf(f, "%d\n", value);
+	fclose(f);
+
+	return 0;
+}
+
+int amdGetTemp(const char *path, int *temp)
+{
+	static const char file[] = "/hwmon/hwmon0/temp1_input";
+	return amdReadInt(path, file, sizeof(file) - 1, temp);
+}
+
+int amdSetControlMode(const char *path, enum ControlMode mode)
+{
+	if (mode != AUTOMATIC && mode != MANUAL) {
 		return 1;
 	}
 
 	static const char file[] = "/hwmon/hwmon0/pwm1_enable";
-	char *path = malloc(strlen(path_) + sizeof file);
-	strcpy(path, path_);
-	strcat(path, file);
-
-	FILE *f = fopen(path, "wb");
-	if (f == NULL)
-		return 1;
-
-	fprintf(f, "%d\n", (int)mode);
-	fclose(f);
-
-	return 0;
+	return amdWriteInt(path, file, sizeof(file) - 1, (int)mode);
 }
 
-int amdSetFanPWM(const char *path_, int pwm)
+int amdSetFanPWM(const char *path, int pwm)
 {
-	if(pwm < 0 || pwm > 255) {
+	if (pwm < 0 || pwm > 255) {
 		return 1;
 	}
 
 	static const char file[] = "/hwmon/hwmon0/pwm1";
-	char *path = malloc(strlen(path_) + sizeof file);
-	strcpy(path, path_);
-	strcat(path, file);
+	return amdWriteInt(path, file, sizeof(file) - 1, pwm);
+}
 
-	FILE *f = fopen(path, "wb");
-	if (f == NULL)
-		return 1;
+int amdGetBusyPercent(const char *path, int *busy)
+{
+	static const char file[] = "/gpu_busy_percent";
+	return amdReadInt(path, file, sizeof(file)-1, busy);
+}
 
-	fprintf(f, "%d\n", pwm);
-	fclose(f);
+int amdGetPowerAvg(const char *path, int *p)
+{
+	static const char file[] = "/hwmon/hwmon0/power1_average";
+	return amdReadInt(path, file, sizeof(file)-1, p);
+}
 
-	return 0;
+int amdGetFanMinRPM(const char *path, int *rpm)
+{
+	static const char file[] = "/hwmon/hwmon0/fan1_min";
+	return amdReadInt(path, file, sizeof(file)-1, rpm);
+}
+
+int amdGetFanMaxRPM(const char *path, int *rpm)
+{
+	static const char file[] = "/hwmon/hwmon0/fan1_max";
+	return amdReadInt(path, file, sizeof(file)-1, rpm);
 }
 

@@ -34,6 +34,21 @@ struct Args defaultArgs()
 	return args;
 }
 
+int measureAmd(const char *path, struct Measurements *m)
+{
+	int (*todo[])(const char *, int *) = {amdGetTemp, amdGetBusyPercent, amdGetPowerAvg,
+					      amdGetFanMinRPM, amdGetFanMaxRPM};
+	int *dsts[] = {&m->temp, &m->busy, &m->power_avg, &m->fan_min, &m->fan_max};
+
+	for (int i = 0; i != sizeof(dsts) / sizeof(*dsts); i++) {
+		int err = todo[i](path, dsts[i]);
+		if (err != 0)
+			return err;
+	}
+
+	return 0;
+}
+
 struct Args parseArgs(int argc, char **argv)
 {
 	struct Args args = defaultArgs();
@@ -113,29 +128,31 @@ int run(struct Control *const ctrl)
 
 	if (ctrl->init(&ctrl->state) != 0) {
 		fprintf(stderr, "error: failed to initialize control\n");
-			goto fail;
+		goto fail;
 	}
 
 	if (ctrl->parseParameters(ctrl->state, ctrl->parameters) != 0) {
 		fprintf(stderr, "error: failed to parse parameters\n");
-			goto fail;
+		goto fail;
 	}
 
 	int lastPWM = -1;
 
-	fprintf(stderr, "Switching to manual control for '%s' (%s)\n", ctrl->card.name, ctrl->card.path);
+	fprintf(stderr, "Switching to manual control for '%s' (%s)\n", ctrl->card.name,
+		ctrl->card.path);
 	amdSetControlMode(ctrl->card.path, MANUAL);
 	while (!terminate_req) {
 		struct Measurements m;
 		struct Action action;
 
-		if (amdReadTemp(ctrl->card.path, &m.temp) != 0) {
-			fprintf(stderr, "error: cannot read temperature\n");
+		if(measureAmd(ctrl->card.path, &m) != 0) {
+			fprintf(stderr, "error: cannot measure parameters of card");
 			goto fail;
 		}
 
 		if (ctrl->verbose)
-			fprintf(stderr, "info: temp: %d °C  pwm: %d (range 0-255)\n", m.temp / 1000, lastPWM);
+			fprintf(stderr, "info: temp: %d °C  pwm: %d (range 0-255)\n", m.temp / 1000,
+				lastPWM);
 
 		if (ctrl->control(ctrl->state, &m, &action) != 0) {
 			fprintf(stderr, "error: control function failed\n");
@@ -161,7 +178,8 @@ fail:
 	err = 1;
 good:
 
-	fprintf(stderr, "Switching to automatic control for '%s' (%s)\n", ctrl->card.name, ctrl->card.path);
+	fprintf(stderr, "Switching to automatic control for '%s' (%s)\n", ctrl->card.name,
+		ctrl->card.path);
 	amdSetControlMode(ctrl->card.path, AUTOMATIC);
 
 	ctrl->finalize(ctrl->state);

@@ -7,8 +7,10 @@
   /lib/x86_64-linux-gnu/ld-*.so mr,
   /usr/local/bin/vegachiller mr,
 
+  /sys/devices/pci*/*/*/*/*/gpu_busy_percent r,
   /sys/devices/pci*/*/*/*/*/hwmon/hwmon0/** r,
   /sys/devices/pci*/*/*/*/*/hwmon/hwmon0/pwm1 rw,
+  /sys/devices/pci*/*/*/*/*/hwmon/hwmon0/pwm1_enable rw,
   /sys/devices/pci*/*/*/*/*/hwmon/hwmon0/pwm1_enable rw,
   
 

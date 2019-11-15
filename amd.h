@@ -12,3 +12,5 @@ int amdGetBusyPercent(const char *path, int *busy);
 int amdGetPowerAvg(const char *path, int *p);
 int amdGetFanMinRPM(const char *path, int *rpm);
 int amdGetFanMaxRPM(const char *path, int *rpm);
+int amdGetVendorProduct(const char *path, int *vendor, int *device);
+int amdGetSubsystemIDs(const char *path, int *vendor, int *device);

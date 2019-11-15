@@ -3,6 +3,9 @@
 struct Card {
 	const char *name;
 	const char *path;
+
+	int vendorID, productID;
+	int sub_vendorID, sub_deviceID;
 };
 
 struct Measurements {

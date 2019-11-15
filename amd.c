@@ -67,6 +67,15 @@ int amdSetControlMode(const char *path, enum ControlMode mode)
 	return amdWriteInt(path, file, sizeof(file) - 1, (int)mode);
 }
 
+int amdGetControlMode(const char *path, enum ControlMode *mode)
+{
+	static const char file[] = "/hwmon/hwmon0/pwm1_enable";
+	int imode;
+	int res = amdReadInt(path, file, sizeof(file) - 1, &imode);
+	*mode = (enum ControlMode) imode;
+	return res;
+}
+
 int amdSetFanPWM(const char *path, int pwm)
 {
 	if (pwm < 0 || pwm > 255) {
@@ -75,6 +84,12 @@ int amdSetFanPWM(const char *path, int pwm)
 
 	static const char file[] = "/hwmon/hwmon0/pwm1";
 	return amdWriteInt(path, file, sizeof(file) - 1, pwm);
+}
+
+int amdGetFanPWM(const char *path, int *pwm)
+{
+	static const char file[] = "/hwmon/hwmon0/pwm1";
+	return amdReadInt(path, file, sizeof(file) - 1, pwm);
 }
 
 int amdGetBusyPercent(const char *path, int *busy)

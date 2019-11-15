@@ -50,6 +50,8 @@ std::vector<Card> detectCards()
 		card.path = strdup(path);
 		amdGetVendorProduct(path, &card.vendorID, &card.productID);
 		amdGetSubsystemIDs(path, &card.sub_vendorID, &card.sub_deviceID);
+		amdGetFanMinRPM(path, &card.fan_min);
+		amdGetFanMaxRPM(path, &card.fan_max);
 		sprintf(path + len, ": %s", sus_vendor.at(card.sub_vendorID));
 		card.name = strdup(name);
 		res.push_back(card);
@@ -61,8 +63,8 @@ std::vector<Card> detectCards()
 int measureAmd(const char *path, struct Measurements *m)
 {
 	int (*todo[])(const char *, int *) = {amdGetTemp, amdGetBusyPercent, amdGetPowerAvg,
-					      amdGetFanMinRPM, amdGetFanMaxRPM};
-	int *dsts[] = {&m->temp, &m->busy, &m->power_avg, &m->fan_min, &m->fan_max};
+					      amdGetFanPWM};
+	int *dsts[] = {&m->temp, &m->busy, &m->power_avg, &m->pwm};
 
 	for (int i = 0; i != sizeof(dsts) / sizeof(*dsts); i++) {
 		int err = todo[i](path, dsts[i]);
@@ -84,7 +86,7 @@ struct MeasurementBuffer {
 	void add(const Measurements &m)
 	{
 		buf[i++] = m;
-		if(i == size())
+		if (i == size())
 			i = 0;
 	}
 
@@ -138,8 +140,6 @@ int main(int, char **)
 	ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
 	ImGui_ImplOpenGL2_Init();
 
-	bool show_demo_window = true;
-	bool show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.1f, 0.1f, 1.00f);
 
 	ImFont *font1 = io.Fonts->AddFontFromFileTTF(FONT_TTF, 18);
@@ -149,16 +149,21 @@ int main(int, char **)
 	auto selectedCard = 0;
 	auto activePage = PAGE_INFO;
 	std::mutex meas_lock;
-	MeasurementBuffer meas(256);
+	std::vector<MeasurementBuffer> meas(cards.size(), MeasurementBuffer(120));
 
 	std::thread measure_thread([&] {
-		Measurements tmp;
+		std::vector<Measurements> tmp(cards.size());
 		for (;;) {
-			measureAmd(cards[selectedCard].path, &tmp);
+			for (size_t i = 0; i != meas.size(); i++) {
+				measureAmd(cards[i].path, &tmp[i]);
+			}
 			{
 				std::lock_guard<std::mutex> lock(meas_lock);
-				meas.add(tmp);
+				for (size_t i = 0; i != meas.size(); i++) {
+					meas[i].add(tmp[i]);
+				}
 			}
+
 			usleep(1000000);
 		}
 	});
@@ -216,21 +221,51 @@ int main(int, char **)
 			ImGui::Text("Info");
 			ImGui::PopFont();
 
-			ImGui::Text("Temperature: %d °C", meas.newest().temp / 1000);
-			ImGui::PlotLines("", [](void *data, int i) -> float {
-				auto *meas = static_cast<MeasurementBuffer*>(data);
-				return (*meas)[i].temp / 1000;
-			}, &meas, meas.size(), 0, nullptr, 0, 100, ImVec2{256, 100});
-			ImGui::Text("GPU Load: %d %%", meas.newest().busy);
-			ImGui::PlotLines("", [](void *data, int i) -> float {
-				auto *meas = static_cast<MeasurementBuffer*>(data);
-				return (*meas)[i].busy;
-			}, &meas, meas.size(), 0, nullptr, 0, 100, ImVec2{256, 100});
-			ImGui::Text("Avg. Power used: %d W", meas.newest().power_avg / 1000000);
-			ImGui::PlotLines("", [](void *data, int i) -> float {
-				auto *meas = static_cast<MeasurementBuffer*>(data);
-				return (*meas)[i].power_avg / 1000000;
-			}, &meas, meas.size(), 0, nullptr, 0, 300, ImVec2{256, 100});
+			auto &m = meas[selectedCard];
+
+			ImGui::Text("Temperature: %d °C", m.newest().temp / 1000);
+			ImGui::SameLine(400);
+			ImGui::Text("GPU Load: %d %%", m.newest().busy);
+
+			ImGui::PlotLines("",
+					 [](void *data, int i) -> float {
+						 auto *meas =
+						     static_cast<MeasurementBuffer *>(data);
+						 return (*meas)[i].temp / 1000;
+					 },
+					 &m, m.size(), 0, nullptr, 0, 100, ImVec2{350, 100});
+
+			ImGui::SameLine(400);
+
+			ImGui::PlotLines("",
+					 [](void *data, int i) -> float {
+						 auto *meas =
+						     static_cast<MeasurementBuffer *>(data);
+						 return (*meas)[i].busy;
+					 },
+					 &m, m.size(), 0, nullptr, 0, 100, ImVec2{350, 100});
+
+			ImGui::Text("Fan Speed: %.1f %%", m.newest().pwm / 2.55);
+			ImGui::SameLine(400);
+			ImGui::Text("Avg. Power used: %d W", m.newest().power_avg / 1000000);
+
+			ImGui::PlotLines("",
+					 [](void *data, int i) -> float {
+						 auto *meas =
+						     static_cast<MeasurementBuffer *>(data);
+						 return (*meas)[i].pwm / 2.55;
+					 },
+					 &m, m.size(), 0, nullptr, 0, 100, ImVec2{350, 100});
+
+			ImGui::SameLine(400);
+
+			ImGui::PlotLines("",
+					 [](void *data, int i) -> float {
+						 auto *meas =
+						     static_cast<MeasurementBuffer *>(data);
+						 return (*meas)[i].power_avg / 1000000;
+					 },
+					 &m, m.size(), 0, nullptr, 0, 300, ImVec2{350, 100});
 		}
 
 		ImGui::End();

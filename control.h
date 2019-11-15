@@ -6,12 +6,16 @@ struct Card {
 
 	int vendorID, productID;
 	int sub_vendorID, sub_deviceID;
+
+	int fan_min; // RPM
+	int fan_max; // RPM	
 };
 
 struct Measurements {
 	int temp;      // milli-degrees Celsius
 	int busy;      // 0 - 100%
 	int power_avg; // microwatts
+	int pwm;       // 0-255
 
 	int fan_min; // RPM
 	int fan_max; // RPM

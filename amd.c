@@ -40,7 +40,7 @@ static int amdWriteInt(const char *path_, const char *path_ext, int path_ext_len
 	strcpy(path, path_);
 	strcat(path, path_ext);
 
-	FILE *f = fopen(path, "rb");
+	FILE *f = fopen(path, "wb");
 	if (f == NULL)
 		return 1;
 

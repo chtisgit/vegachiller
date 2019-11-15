@@ -1,4 +1,6 @@
 
+CFLAGS := -g -O3 -Wall $(CFLAGS)
+
 OBJS = vegachiller.o control.o amd.o controls/curve/curve.o
 SDLLIBS = $(shell sdl2-config --libs)
 SDLCFLAGS = $(shell sdl2-config --cflags)

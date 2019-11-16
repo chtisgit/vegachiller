@@ -6,7 +6,7 @@ SDLLIBS = $(shell sdl2-config --libs)
 SDLCFLAGS = $(shell sdl2-config --cflags)
 IMGUI = vendor/imgui/*.cpp vendor/imgui/examples/imgui_impl_sdl.cpp vendor/imgui/examples/imgui_impl_opengl2.cpp
 
-all: vegachiller
+all: vegachiller vegamaster
 
 build_controls:
 	cd controls/curve && $(MAKE)
@@ -17,7 +17,7 @@ build_vegachiller: $(OBJS)
 vegachiller: build_controls build_vegachiller 
 	:
 
-vegachiller-gui: vegachiller-gui.cpp amd.c control.c
+vegamaster: vegamaster.cpp amd.c control.c
 	$(CXX) $(SDLCFLAGS) $(CFLAGS) $(CXXFLAGS) -pthread -g -I . -I vendor/imgui -I vendor/imgui/examples -o $@ $^ $(IMGUI) $(LIBS) $(SDLLIBS) -lGL
 
 %.o: %.c

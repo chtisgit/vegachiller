@@ -17,6 +17,7 @@
 #include "amd.h"
 #include "control.h"
 
+#define APP_NAME "Vegamaster"
 #define FONT_TTF "/usr/share/fonts/truetype/roboto/hinted/Roboto-Regular.ttf"
 
 std::map<int, const char *> sus_vendor = {{0x1002, "AMD"},	{0x1043, "ASUSTeK"},
@@ -123,7 +124,7 @@ int main(int, char **)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	SDL_WindowFlags window_flags =
 	    (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-	SDL_Window *window = SDL_CreateWindow("Vegachiller GUI", SDL_WINDOWPOS_CENTERED,
+	SDL_Window *window = SDL_CreateWindow("Vegamaster", SDL_WINDOWPOS_CENTERED,
 					      SDL_WINDOWPOS_CENTERED, 960, 540, window_flags);
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	SDL_GL_MakeCurrent(window, gl_context);

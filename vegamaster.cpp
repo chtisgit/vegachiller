@@ -108,6 +108,34 @@ struct MeasurementBuffer {
 	}
 };
 
+bool handleEvent(const SDL_Event &event)
+{
+	bool done = false;
+
+	ImGui_ImplSDL2_ProcessEvent(&event);
+	if (event.type == SDL_QUIT)
+		done = true;
+
+	return done;
+}
+
+bool processEvents()
+{
+	SDL_Event event;
+
+	// wait for an event to occur
+	SDL_WaitEvent(&event);
+	bool done = handleEvent(event);
+
+	// handle a few more events if any, but limit the number, such that
+	// the GUI does not become unresponsive.
+	for (int i = 0; i != 100 && SDL_PollEvent(&event); i++) {
+		done = handleEvent(event) || done;
+	}
+
+	return done;
+}
+
 enum Page { PAGE_INFO, PAGE_FAN };
 
 int main(int, char **)
@@ -169,14 +197,20 @@ int main(int, char **)
 		}
 	});
 
+	auto timer = SDL_AddTimer(500,
+				  [](uint32_t interval, void *param) -> uint32_t {
+					  SDL_Event event;
+					  event.user.type = SDL_USEREVENT;
+					  event.user.code = 0;
+					  event.type = SDL_USEREVENT;
+					  SDL_PushEvent(&event);
+					  return interval;
+				  },
+				  nullptr);
+
 	bool done = false;
 	while (!done) {
-		SDL_Event event;
-		while (SDL_PollEvent(&event)) {
-			ImGui_ImplSDL2_ProcessEvent(&event);
-			if (event.type == SDL_QUIT)
-				done = true;
-		}
+		done = processEvents();
 
 		ImGui_ImplOpenGL2_NewFrame();
 		ImGui_ImplSDL2_NewFrame(window);
@@ -199,8 +233,12 @@ int main(int, char **)
 		ImGui::Begin("top", nullptr,
 			     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
 				 ImGuiWindowFlags_NoResize);
-		ImGui::SetWindowPos(ImVec2{120, 10});
-		ImGui::SetWindowSize(ImVec2{820, 40});
+		ImGui::SetWindowPos(ImVec2{10, 10});
+		ImGui::SetWindowSize(ImVec2{920, 40});
+		ImGui::PushFont(font_title);
+		ImGui::Text("Vegamaster");
+		ImGui::PopFont();
+		ImGui::SameLine();
 		if (ImGui::BeginCombo("Graphics Card", cards.size() ? cards[selectedCard].name
 								    : "<no cards detected>")) {
 			for (size_t i = 0; i != cards.size(); i++) {
@@ -283,6 +321,8 @@ int main(int, char **)
 	ImGui_ImplOpenGL2_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
 	ImGui::DestroyContext();
+
+	SDL_RemoveTimer(timer);
 
 	SDL_GL_DeleteContext(gl_context);
 	SDL_DestroyWindow(window);
